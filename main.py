@@ -19,11 +19,10 @@ class Message():
         self.data = ''
         self.caption = ''
 
-
 @dp.message_handler(commands=['start'])
 def start_program(message):
     user_data = message.from_user
-    dp.reply_to(message, f"Hi, {user_data.username}\nYour id - {user_data.id}")
+    dp.reply_to(message, f"Hi, {user_data.username} &#9996;\n&#127380; - {user_data.id} ", parse_mode="HTML")
     
     try:
         path = Path(f"Data-Bases/{datetime.datetime.today().strftime('%V-%B-%Y')}.json")
@@ -47,14 +46,14 @@ def start_program(message):
         # dp.send_message(message.chat.id, str(len(data)))
 
         if str(user_data.id) not in data:
-            dp.send_message(message.chat.id, "You are new user...")
-            dp.send_message(message.chat.id, "To register, enter /lets_go")
+            dp.send_message(message.chat.id, "&#128100; You are new user...", parse_mode="HTML")
+            dp.send_message(message.chat.id, "To register, enter /lets_go &#128173;", parse_mode="HTML")
 
         else:
-            dp.send_message(message.chat.id, "You are old user!!!")
+            dp.send_message(message.chat.id, "&#128159; You are old user!!!", parse_mode="HTML")
  
     else:
-        dp.send_message(message.chat.id, "To register, enter /lets_go")
+        dp.send_message(message.chat.id, "To register, enter /lets_go &#128173;", parse_mode="HTML")
 
 @dp.message_handler(commands=['lets_go'])
 def register(message):
@@ -87,7 +86,7 @@ def register(message):
 
         else:
             status_reg = False
-            dp.send_message(message.chat.id, "You have already been registered...")
+            dp.send_message(message.chat.id, "You have already been registered... &#128147;", parse_mode="HTML")
  
     else:
         data = {
@@ -104,8 +103,42 @@ def register(message):
     if status_reg:
         with open(path, "w", encoding="utf-8") as file:
             json.dump(data, file, sort_keys=True)
-        dp.send_message(message.chat.id, "You have been successully registered :)")
+        dp.send_message(message.chat.id, f"You have been successully registered &#9786;\n&#129305; Current Week-Working is {datetime.datetime.today().strftime('%V-%B-%Y')}", parse_mode="HTML")
 
+@dp.message_handler(commands=['info'])
+def information(message):
+    user_data = message.from_user
+
+    try:
+        path = Path(f"Data-Bases/{datetime.datetime.today().strftime('%V-%B-%Y')}.json")
+
+        # создать или оставить прежним
+        path.touch(exist_ok=True)
+
+        with open(path, "r", encoding="utf-8") as file:
+            data = json.load(file)
+
+        status = True
+    except json.decoder.JSONDecodeError:
+        status = False
+        print('File is empty')
+
+    if status:
+        if str(user_data.id) not in data:
+            dp.send_message(message.chat.id, "To learn more information enter /lets_go &#128173;")
+        
+        else:
+            dp.send_message(message.chat.id, f"&#128187; Current Week-Working is {datetime.datetime.today().strftime('%V-%B-%Y')}...\nAnd You have registered on this week &#128583;", parse_mode="HTML")
+            dp.send_message(message.chat.id, f"&#127892; In this Week-Working have already registered {len(data)} people...\nSo, Current Price is {int(600/len(data))}&#8381; for each person &#128176;", parse_mode="HTML")
+            
+            if not data[str(user_data.id)]['status']:
+                dp.send_message(message.chat.id, f"&#10060; You haven't paid this Week-Working...\nTo pay click here: &#128179;", parse_mode="HTML")
+
+            else:
+                dp.send_message(message.chat.id, f"&#9989; You have successfully paid, thanks &#128537;", parse_mode="HTML")
+
+    else:
+        dp.send_message(message.chat.id, f"&#9989; No one has registered yet...\nTo registered enter /lets_go &#128173;", parse_mode="HTML")
 
 
 @dp.message_handler(content_types=ContentType.PHOTO)
@@ -156,25 +189,53 @@ def process_date_step(message):
 def process_caption_step(message):
     user_data = message.from_user
 
-    message_by_1010205515.caption = message.text
-
     try:
+        path = Path(f"Data-Bases/{datetime.datetime.today().strftime('%V-%B-%Y')}.json")
 
-        beauty_text = f"""
-        <b>ProGroup For</b> <i>{user_data.username}</i>\n
-        <b>Subject:</b> {message_by_1010205515.subject}
-        <b>Number or Task:</b> {message_by_1010205515.task}
-        <b>Date of completion:</b> {message_by_1010205515.data}
-        <b>Additional Comment:</b> {message_by_1010205515.caption}\n
-The work was done at: <u>{datetime.datetime.today().strftime('%A, %d %B %Y, %H:%M:%S')} (UTC+1)</u>
-        """
+        # создать или оставить прежним
+        path.touch(exist_ok=True)
 
-        dp.send_photo("1010205515", photo=message_by_1010205515.image, caption=beauty_text, parse_mode='HTML')
+        with open(path, "r", encoding="utf-8") as file:
+            data = json.load(file)
 
-        dp.send_message(message.chat.id, "The process was successful...)")
-    
-    except Exception as _ex:
-        dp.send_message(message.chat.id, "The process was UNsuccessful...)\n"+str(_ex))
+        status = True
+    except json.decoder.JSONDecodeError:
+        status = False
+        print('File is empty')
+
+    user_data = message.from_user
+
+    message_by_1010205515.caption = message.text
+    if status:
+        
+        try:
+
+            # Цикл отправки фото каждому пользователю
+            for user in data:
+                beauty_text = f"""
+<b>ProGroup For</b> <i>{data[user]['username']}</i>&#127892;\n
+<b>Subject:</b> {message_by_1010205515.subject}&#9999;
+<b>Number or Task:</b> {message_by_1010205515.task}	&#128466;
+<b>Date of completion:</b> {message_by_1010205515.data}&#128337;
+<b>Additional Comment:</b> {message_by_1010205515.caption}&#128173;\n
+&#8986;The work was done at: <u>{datetime.datetime.today().strftime('%A, %d %B %Y, %H:%M:%S')} (UTC+1)</u>
+            """
+                try:
+
+                    dp.send_photo(str(user), photo=message_by_1010205515.image, caption=beauty_text, parse_mode='HTML')
+                    dp.send_message(message.chat.id, f"The photo was send { data[user]['username'] } &#128583;", parse_mode="HTML")
+
+                except Exception as _ex:
+                    dp.send_message(message.chat.id, "&#9888; The process was fail\n"+str(_ex), parse_mode="HTML")
+
+            dp.send_message(message.chat.id, "The process was successful...)")
+        
+        except Exception as _ex:
+            dp.send_message(message.chat.id, "The process was UNsuccessful...)\n"+str(_ex))
+
+    else:
+        dp.send_message(message.chat.id, "No one has registered...)")
+
 
 if __name__ == '__main__':
     print("MAIN")
