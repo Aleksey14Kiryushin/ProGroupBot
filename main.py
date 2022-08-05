@@ -1,7 +1,13 @@
 import telebot
 import datetime
+import os
+import shutil
+
 import json
-from config import PAYMENT_TOKEN, TELEGRAM_TOKEN, ITEM_URL, OWN_ID
+from config import (
+    PAYMENT_TOKEN, TELEGRAM_TOKEN,
+    MODERATOR_ID, OWN_ID,
+    )
 
 from aiogram.types import ContentType
 
@@ -12,6 +18,9 @@ from telebot.types import(
     LabeledPrice,
     PreCheckoutQuery, 
     )
+
+# Отправлять TXT файлы
+# lkey2007 account
 
 
 dp = telebot.TeleBot(TELEGRAM_TOKEN)
@@ -179,7 +188,7 @@ def send_unpaid(message):
             dp.send_message(message.chat.id, "To block user enter /block and send his id...")
 
         else:
-            dp.send_message(OWN_ID, "Empty")
+            dp.send_message(message.chat.id, "Empty")
 
     else:
         dp.send_message(message.chat.id, "You Blocked &#10060;", parse_mode="HTML")
@@ -189,8 +198,8 @@ def get_block_user(message):
     returning = check_block(message.chat.id)
 
     if returning:
-        if str(message.chat.id) == OWN_ID:  
-            dp.send_message(OWN_ID, "Send me id to block:")
+        if str(message.chat.id) == OWN_ID or str(message.chat.id) == MODERATOR_ID:  
+            dp.send_message(message.chat.id, "Send me id to block:")
     
             dp.register_next_step_handler(message, block_user)
 
@@ -295,11 +304,18 @@ def information(message):
 
         if status:
             if str(user_data.id) not in data:
-                dp.send_message(message.chat.id, "To learn more information enter /lets_go &#128173;")
+                dp.send_message(message.chat.id, "To learn more information enter /lets_go &#128173;", parse_mode="HTML")
             
             else:
-                dp.send_message(message.chat.id, f"&#128187; Current Week-Working is {datetime.datetime.today().strftime('%V-%B-%Y')}...\nAnd You have registered on this week &#128583;", parse_mode="HTML")
-                dp.send_message(message.chat.id, f"&#127892; In this Week-Working have already registered {len(data)} people...\nSo, Current Price is {int(600/len(data))}&#8381; for each person &#128176;", parse_mode="HTML")
+                dp.send_message(message.chat.id, f"&#128187; Current Week-Working is {datetime.datetime.today().strftime('%V-%B-%Y')}...\nAnd You have registered on this week &#128583;", parse_mode="HTML")   
+                current_price = int(600/len(data))
+                if OWN_ID in data:
+                    try:
+                        current_price = int(600/(len(data)-1))
+                    except:
+                       current_price = int(600/len(data))
+
+                dp.send_message(message.chat.id, f"&#127892; In this Week-Working have already registered <strong>{len(data)} people</strong>...\nSo, Current Price is <strong>{current_price}&#8381;</strong> for each person &#128176;", parse_mode="HTML")
                 
                 if not data[str(user_data.id)]['status']:
                     dp.send_message(message.chat.id, f"&#10060; You haven't paid this Week-Working...\n&#9999; Please indicate your nickname in the comments\nIf pay, click here: /pay &#128179;", parse_mode="HTML")
@@ -313,6 +329,37 @@ def information(message):
     else:
         dp.send_message(message.chat.id, "You Blocked &#10060;", parse_mode="HTML")
 
+@dp.message_handler(content_types=ContentType.DOCUMENT)
+def send_txt_file_id(message):
+    
+    if str(message.chat.id) != OWN_ID and str(message.chat.id) != MODERATOR_ID:
+        status_send = False
+        dp.send_message(message.chat.id, "I dont want send it :(", parse_mode="HTML")
+
+    # dp.reply_to(message, "Message ID - "+str(dp.reply_to(message, "Message ID - "+str(message.chat.id))))
+    
+    try:
+        if not os.path.exists("Downloads"): 
+            os.makedirs("Downloads")
+
+        path = Path(f"Downloads/{message.document.file_name}")
+
+        # создать или оставить прежним
+        path.touch(exist_ok=True)
+
+        file_info = dp.get_file(message.document.file_id)
+        downloaded_file = dp.download_file(file_info.file_path)
+
+        with open(path, 'wb') as new_file:
+            new_file.write(downloaded_file)
+
+        dp.reply_to(message, "You can send another file\nOr send /run to proceed to adding information!")
+    
+    except Exception as _Ex:
+        dp.send_message(message.chat.id, "Error has occurred :(\n"+str(_Ex), parse_mode="HTML")
+    
+
+    
 
 @dp.message_handler(content_types=ContentType.PHOTO)
 def send_photo_file_id(message: Message):
@@ -325,7 +372,7 @@ def send_photo_file_id(message: Message):
         dp.reply_to(message, "Message ID - "+str(message.chat.id))
 
 
-        if str(message.chat.id) == OWN_ID:
+        if str(message.chat.id) == OWN_ID or str(message.chat.id) == MODERATOR_ID:
             try:
                 # message_by_1010205515 = Message(str(message.chat.id))
                 message_by_1010205515.images.append(str(message.photo[-1].file_id))
@@ -358,7 +405,7 @@ def create_class(message):
 
         dp.reply_to(message, "Message ID - "+str(message.chat.id))
 
-        if str(message.chat.id) == OWN_ID:
+        if str(message.chat.id) == OWN_ID or str(message.chat.id) == MODERATOR_ID:
 
             message_by_1010205515 = Message(str(message.chat.id))
             # message_by_1010205515.images.append(str(message.photo[-1].file_id))
@@ -381,7 +428,7 @@ def create_class(message):
 def add_info(message):
     global message_by_1010205515
 
-    if str(message.chat.id) == OWN_ID:
+    if str(message.chat.id) == OWN_ID or str(message.chat.id) == MODERATOR_ID:
 
         message = dp.send_message(message.chat.id, "Please, write subject: ")
 
@@ -393,6 +440,23 @@ def add_info(message):
 
         dp.reply_to(message, f"Sorry :(\n I don't want to send it...")
 
+@dp.message_handler(commands=['run'])
+def add_info_file(message):
+    global message_by_1010205515
+
+    if str(message.chat.id) == OWN_ID or str(message.chat.id) == MODERATOR_ID:
+
+        message = dp.send_message(message.chat.id, "Please, write subject: ")
+
+        message_by_1010205515 = Message(str(message.chat.id))
+
+        dp.register_next_step_handler(message, process_subject_step_file)
+
+    else:
+
+        dp.reply_to(message, f"Sorry :(\n I don't want to send it...")
+
+
 def process_subject_step(message):
 
     message_by_1010205515.subject = message.text
@@ -400,6 +464,14 @@ def process_subject_step(message):
     message = dp.send_message(message.chat.id, "Please, write number or task: ")
 
     dp.register_next_step_handler(message, process_task_step)
+
+def process_subject_step_file(message):
+
+    message_by_1010205515.subject = message.text
+
+    message = dp.send_message(message.chat.id, "Please, write number or task: ")
+
+    dp.register_next_step_handler(message, process_task_step_file)
 
 def process_task_step(message):
 
@@ -409,6 +481,14 @@ def process_task_step(message):
 
     dp.register_next_step_handler(message, process_date_step)
 
+def process_task_step_file(message):
+
+    message_by_1010205515.task = message.text
+
+    message = dp.send_message(message.chat.id, "Please, Enter the date by which you want to complete the task ")
+
+    dp.register_next_step_handler(message, process_date_step_file)
+
 def process_date_step(message):
     
     message_by_1010205515.data = message.text
@@ -416,6 +496,75 @@ def process_date_step(message):
     message = dp.send_message(message.chat.id, "Please, write some description about it: ")
 
     dp.register_next_step_handler(message, process_caption_step)
+
+def process_date_step_file(message):
+    
+    message_by_1010205515.data = message.text
+
+    message = dp.send_message(message.chat.id, "Please, write some description about it: ")
+
+    dp.register_next_step_handler(message, sending_files_with_caption)
+
+def sending_files_with_caption(message):
+    user_data = message.from_user
+    message_by_1010205515.caption = message.text
+
+    try:
+        path = Path(f"Data-Bases/{datetime.datetime.today().strftime('%V-%B-%Y')}.json")
+
+        # создать или оставить прежним
+        path.touch(exist_ok=True)
+
+        with open(path, "r", encoding="utf-8") as file:
+            data = json.load(file)
+
+        status = True
+    except json.decoder.JSONDecodeError:
+        status = False
+        print('File is empty')
+    status_send = True
+
+    if status and status_send:
+        try:
+            for user in data:
+                returning = check_block(user)
+
+                if returning and data[str(user)]['status']:
+                # только те, у кого одобрена подписка
+                    beauty_text = f"""
+<b>ProGroup For</b> <i>{data[user]['username']}</i>&#127892;\n
+<b>Subject:</b> {message_by_1010205515.subject}&#9999;
+<b>Number or Task:</b> {message_by_1010205515.task}	&#128466;
+<b>Date of completion:</b> {message_by_1010205515.data}&#128337;
+<b>Additional Comment:</b> {message_by_1010205515.caption}&#128173;\n
+&#8986;The work was done at: <u>{datetime.datetime.today().strftime('%A, %d %B %Y, %H:%M:%S')} (UTC+1)</u>
+                """
+                    # dp.send_document(str(user), document=message.document[-1].file_id, caption=beauty_text, parse_mode="HTML")
+
+                    try:
+                        # Отправляем кадый файл папки
+                        for filename in os.listdir('./Downloads'):
+                            print("FILE", filename)
+                            with open(os.path.join('./Downloads', filename), 'rb') as file_send:
+                                # update.message.reply_photo(file_send)
+                                dp.send_document(str(user), document=file_send)
+
+                        dp.send_message(str(user), beauty_text, parse_mode="HTML")
+
+                        # Удаляем папку вместе со всеми ее файлами
+                        path = os.path.join(os.path.abspath(os.path.dirname(__file__)), f'./Downloads')
+                        shutil.rmtree(path)
+                            
+                        dp.send_message(message.chat.id, f"The file was send { data[user]['username'] } &#128583;", parse_mode="HTML")
+
+                    except Exception as _ex:
+                        dp.send_message(message.chat.id, "&#9888; The process was fail\n"+str(_ex), parse_mode="HTML")
+
+        except Exception as _ex:
+            dp.send_message(message.chat.id, "Fail in send file\n"+str(_ex), parse_mode="HTML")
+
+    else:
+        dp.send_message(message.chat.id, "No one has registered...)")
 
 
 def process_caption_step(message):
@@ -436,7 +585,6 @@ def process_caption_step(message):
         print('File is empty')
 
     
-
     message_by_1010205515.caption = message.text
     if status:
         
@@ -492,20 +640,23 @@ def pay_process(message):
         dp.send_message(message.chat.id, "&#128221; Your application is under consideration\nWhen the check is over, your status will change &#9989;", parse_mode="HTML")
     
         dp.send_message(OWN_ID, f'If "{user_data.username}" paid, send /add and this:')
+        dp.send_message(MODERATOR_ID, f'If "{user_data.username}" paid, send /add and this:')
         
         id_text = f"<code>{user_data.id}</code>"
 
         dp.send_message(OWN_ID, id_text, parse_mode="HTML")
+        dp.send_message(MODERATOR_ID, id_text, parse_mode="HTML")
 
     else:
         dp.send_message(message.chat.id, "You Blocked &#10060;", parse_mode="HTML")
- 
+
 
 @dp.message_handler(commands=['add'])
 def add_user(message):
-    
-    if str(message.chat.id) == OWN_ID:  
-        dp.send_message(OWN_ID, "Send me id:")
+    dp.send_message(message.chat.id,str( message.chat.id))
+
+    if str(message.chat.id) == OWN_ID or str(message.chat.id) == MODERATOR_ID:  
+        dp.send_message(message.chat.id, "Send me id:")
  
         dp.register_next_step_handler(message, get_id)
 
@@ -536,17 +687,22 @@ def get_id(message):
 
                 dp.send_message(str(message.text), "Your application has been approved &#9989;", parse_mode="HTML")
                 
-                dp.send_message(OWN_ID, "All Okey!!!")
+                dp.send_message(OWN_ID, f'Application of "{ data[str(message.text)] }" ({ str(message.text) }) was changed on {data[str(message.text)]["status"]} by "{ data[str(message.chat.id)]["username"] }" ({ str(message.chat.id) })')
+                dp.send_message(MODERATOR_ID, f'Application of "{ data[str(message.text)] }" ({ str(message.text) }) was changed on {data[str(message.text)]["status"]} by "{ data[str(message.chat.id)]["username"] }" ({ str(message.chat.id) })')
+            
  
             except Exception as _ex:
                 dp.send_message(OWN_ID, "Fail\n"+str(_ex))
+                dp.send_message(MODERATOR_ID, "Fail\n"+str(_ex))
 
         else:
             dp.send_message(OWN_ID, f"User is not exist\nWas get {message.text}")
+            dp.send_message(MODERATOR_ID, f"User is not exist\nWas get {message.text}")
 
 
     else:
         dp.send_message(OWN_ID, "Empty")
+        dp.send_message(MODERATOR_ID, "Empty")
 
 
 # PAYMENT
